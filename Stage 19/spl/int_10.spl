@@ -1,0 +1,16 @@
+alias currentPID R0;
+currentPID = [SYSTEM_STATUS_TABLE + 1];
+
+alias currentEntry R1;
+currentEntry = PROCESS_TABLE + currentPID*16;
+[currentEntry + 4] = TERMINATED;
+
+alias processID R2;
+processID = 1;
+while (processID < 16) do
+	if ([PROCESS_TABLE + processID*16 + 4] != TERMINATED) then
+		call SCHEDULER;
+	endif;
+	processID = processID + 1;
+endwhile;
+halt;
