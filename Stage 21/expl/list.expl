@@ -1,0 +1,47 @@
+type LinkedList
+{
+	int num;
+	LinkedList next;
+}
+endtype
+
+int main()
+{
+	decl
+		int N,temp,temp1,num;
+		LinkedList head,node,node1;
+	enddecl
+	begin
+		temp = exposcall("Read",-1,N);
+		temp1 = initialize();
+		temp1 = 1;
+		breakpoint;
+		head=null;
+		node=null;
+		while (temp1<=N) do
+			temp = exposcall("Read",-1,num);
+			if (node == null) then
+				head = alloc();
+				head.num = num;
+				head.next = null;
+				node = head;
+			else
+				node1 = alloc();
+				node1.num = num;
+				node1.next = null;
+				node.next = node1;
+				node = node1;
+			endif;
+			temp1 = temp1+1;
+		endwhile;
+		
+		node = head;
+		while (node!=null) do
+			temp = exposcall("Write",-2,node.num);
+			node1 = node;
+			node = node.next;
+			free(node1);
+		endwhile;
+		return 1;
+	end
+}
