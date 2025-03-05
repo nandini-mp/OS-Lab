@@ -1,0 +1,154 @@
+alias functionNum R1;
+
+if (functionNum == OPEN)  then
+	alias fileName R2;
+	alias inodeIndex R3;
+    	inodeIndex = 0;
+    	while(inodeIndex< MAX_FILE_NUM) do
+		if([INODE_TABLE + inodeIndex*16 + 1]==fileName) then
+		    break;
+        	endif;
+        	inodeIndex = inodeIndex + 1;
+    	endwhile;
+    	if(inodeIndex == MAX_FILE_NUM) then
+		R0 = -1;
+		return;
+    	endif;
+
+    	multipush(R1,R2,R3);
+    	R1 = ACQUIRE_INODE;
+    	R2 = inodeIndex;
+	R3 = [SYSTEM_STATUS_TABLE+1];
+	call RESOURCE_MANAGER;
+    	multipop(R1,R2,R3);
+    	if(R0==-1) then
+        	return;
+    	endif;
+    	
+    	if([INODE_TABLE + inodeIndex*16]==EXEC) then
+		R1 = RELEASE_INODE;
+		R2 = inodeIndex;
+		R3 = [SYSTEM_STATUS_TABLE+1];
+		call RESOURCE_MANAGER; //MOD 0
+		R0 = -1;
+		return;
+    	endif;
+
+   	R4 = OPEN_FILE_TABLE;
+    	R5 = OPEN_FILE_TABLE + MAX_OPENFILE_NUM*4;
+	while(R4<R5) do
+		if([R4] == -1) then
+			break;
+		endif;
+		R4 =R4+4;
+	endwhile;
+
+    	if (R4 == R5) then
+		R1 = RELEASE_INODE;
+		R2 = inodeIndex;
+		R3 = [SYSTEM_STATUS_TABLE+1];
+		call RESOURCE_MANAGER; //MOD 0
+		R0 = -2;
+		return;
+    	endif;
+    	R5= R4;
+    	R6 = R4 - OPEN_FILE_TABLE;
+    	R4= R6/4;
+    	alias openFileTableIndex R4;
+
+    	if(fileName == "root") then
+        	[R5] = INODE_ROOT;
+    	else
+        	[R5] = inodeIndex;
+        	R6 = FILE_STATUS_TABLE + inodeIndex*4 + 1;
+		if([R6] == -1) then
+		    [R6] = 1;
+		else
+		    [R6] = [R6] + 1;
+		endif;
+    	endif;
+    	[R5+1]=1;
+    	[R5+2]=0;
+
+    	multipush(R4);
+	R1 = RELEASE_INODE;
+	R2 = inodeIndex;
+	R3 = [SYSTEM_STATUS_TABLE+1];
+	call RESOURCE_MANAGER;
+	multipop(R4);
+    	R0 = openFileTableIndex;
+    	return;
+endif;
+
+if(functionNum == CLOSE) then
+    	alias openFileTableIndex R2;
+    	alias PID R3;
+    	alias inodeIndex R4;
+    	alias openFileTableOffset R5;
+
+    	openFileTableOffset = OPEN_FILE_TABLE + openFileTableIndex*4;
+    	inodeIndex = [openFileTableOffset];
+	[openFileTableOffset+1] = [openFileTableOffset+1] -1;
+
+    	if([openFileTableOffset+1] == 0) then
+		[openFileTableOffset] = -1;
+		[openFileTableOffset+1] = -1;
+		[openFileTableOffset+2] = -1;
+		[openFileTableOffset+3] = -1;
+        	R6 = FILE_STATUS_TABLE + inodeIndex*4 + 1;
+        	if([INODE_TABLE + inodeIndex*16] != ROOT ) then
+            		[R6] = [R6] - 1;
+        	endif;
+        	if([R6]==0) then
+            		[R6]=-1;
+        	endif;
+    	endif;
+    return;
+endif;
+
+if(functionNum == BUFFERED_READ) then
+	alias disk_block_n R2;
+    	alias disk_offset R3;
+    	alias address R4;
+
+	alias buffer_n R5;
+    	buffer_n = disk_block_n % 4;
+
+    	multipush(R1,R2,R3,R4,R5);
+    	R1 = ACQUIRE_BUFFER;
+    	R2 = buffer_n;
+    	R3 = [SYSTEM_STATUS_TABLE+1];
+    	call RESOURCE_MANAGER; //MOD 0
+    	multipop(R1,R2,R3,R4,R5);
+
+    	R6 =BUFFER_TABLE + buffer_n*4;
+    	if([R6]!=disk_block_n) then
+		if([R6 + 1]==1) then
+		    multipush(R1,R2,R3,R4,R5,R6);
+		    R1 = DISK_STORE;
+		    R3 = 71 + buffer_n;
+		    R4 = [R6];
+		    R2 = [SYSTEM_STATUS_TABLE + 1];
+		    call  DEVICE_MANAGER; //MOD 4
+		    multipop(R1,R2,R3,R4,R5,R6);
+		    [R6 + 1]=0;
+		endif;
+        multipush(R1,R2,R3,R4,R5,R6);
+        R1 = DISK_LOAD;
+        R3 = 71 + buffer_n;
+        R4 = disk_block_n;
+        R2 = [SYSTEM_STATUS_TABLE+1];
+        call DEVICE_MANAGER; // MOD 4
+        multipop(R1,R2,R3,R4,R5,R6);
+        [R6] = disk_block_n;
+    endif;
+    [[[PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16 + 14] + 2*(address/512)]*512 + (address%512)] = [(71+buffer_n)*512 + disk_offset];
+    multipush(R1,R2,R3,R4,R5,R6);
+    R1 = RELEASE_BUFFER;
+    R2 = buffer_n;
+    R3 = [SYSTEM_STATUS_TABLE+1];
+    call RESOURCE_MANAGER; //MOD 0
+    multipop(R1,R2,R3,R4,R5,R6);
+    return;
+endif;
+return;
