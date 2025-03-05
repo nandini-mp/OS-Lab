@@ -1,0 +1,156 @@
+alias userSP R1;
+userSP = SP;
+
+alias pt_sst R2;
+pt_sst = PROCESS_TABLE + ([SYSTEM_STATUS_TABLE +1] * 16);
+[pt_sst + 13] = SP;
+SP = [pt_sst + 11]*512 - 1;
+
+R9 = [pt_sst + 14];
+alias syscall_no R3;
+R3 = userSP -5;
+syscall_no = [[R9 + (R3/512)*2]*512 + (R3%512) ];
+
+[pt_sst + 9] = syscall_no;
+
+alias  file_name R4;
+file_name = [[R9 + ((userSP-4)/512)*2]*512 + (userSP-4)%512 ];
+
+if(syscall_no == INT_CREATE) then
+	alias permissions R5;
+    	permissions = [[R9 + ((userSP-3)/512)*2]*512 + (userSP-3)%512 ];
+    
+    	alias inodeIndex R6;
+    	inodeIndex = 0;
+    	while(inodeIndex< MAX_FILE_NUM) do
+        	if([INODE_TABLE + inodeIndex*16 + 1]==file_name) then //already present
+        	    	[[R9 + ((userSP -1)/512)*2]*512 + (userSP -1)%512] = 0; //RETURN value
+            		[pt_sst + 9] = 0;
+            		SP = userSP;
+           		ireturn;
+        	endif;
+        	inodeIndex = inodeIndex + 1;
+    	endwhile;
+
+    	inodeIndex = 0;
+    	while(inodeIndex< MAX_FILE_NUM) do
+        	if([INODE_TABLE + inodeIndex*16 + 1]==-1) then
+            		break;
+        	endif;
+        	inodeIndex = inodeIndex + 1;
+    	endwhile;
+
+    	if(inodeIndex == MAX_FILE_NUM) then
+		[[R9 + ((userSP -1)/512)*2]*512 + (userSP -1)%512] = -1; //RETURN value
+		[pt_sst + 9] = 0;
+		SP = userSP;
+        	ireturn;
+    	endif;
+
+    	R7=INODE_TABLE + inodeIndex*16 ;
+	[R7 + 1] = file_name;
+	[R7 + 2] = 0;
+	[R7 + 0] = DATA;
+	[R7 + 8] = -1;
+	[R7 + 9] = -1;
+	[R7 + 10] = -1;
+	[R7 + 11] = -1;
+	[R7 + 3] = [pt_sst + 3];
+    	[R7 + 4] = permissions;
+
+	R8=ROOT_FILE + inodeIndex*8 ;
+	[R8 + 0] = file_name;
+	[R8 + 1] = 0;
+	[R8 + 2] = DATA;
+	[R8 + 3] = [USER_TABLE + 2*[pt_sst + 3]];
+	[R8 + 4] = permissions;
+    
+	[[R9 + ((userSP -1)/512)*2]*512 + (userSP -1)%512] = 0;
+	[pt_sst + 9] = 0;
+
+	SP = userSP;
+	ireturn;
+endif;
+
+if(syscall_no == INT_DELETE) then
+	alias inodeIndex R5;
+	inodeIndex = 0;
+	while(inodeIndex< MAX_FILE_NUM) do
+		if([INODE_TABLE + inodeIndex*16 + 1]==file_name) then
+    		        break;
+      		endif;
+       		inodeIndex = inodeIndex + 1;
+    	endwhile;
+
+   	if(inodeIndex == MAX_FILE_NUM) then
+        	[[R9 + ((userSP -1)/512)*2]*512 + (userSP -1)%512] = 0;
+        	[pt_sst + 9] = 0;
+        	SP = userSP;
+        	ireturn;
+    	endif;
+    	
+    	if([INODE_TABLE + inodeIndex*16 + 0] != DATA) then
+        	[[R9 + ((userSP-1)/512)*2]*512 + (userSP-1)%512] = -1;
+        	[pt_sst + 9] = 0;
+        	SP = userSP;
+        	ireturn;
+    	endif;
+
+    	if([INODE_TABLE + inodeIndex*16 + 4] == EXCLUSIVE) then
+		if(([pt_sst + 3]!=ROOT)  && ([pt_sst + 3] != [INODE_TABLE + inodeIndex*16 + 3]))  then
+			[[R9 + ((userSP-1)/512)*2]*512 + (userSP-1)%512] = -1;
+		    	[pt_sst + 9] = 0;
+		    	SP = userSP;
+		    	ireturn;
+		endif;
+	endif;
+
+    	multipush(R1,R2,R3,R4,R5,R9);
+	R1=ACQUIRE_INODE;
+	R2=inodeIndex;
+	R3=[SYSTEM_STATUS_TABLE + 1];
+	call RESOURCE_MANAGER;
+	multipop(R1,R2,R3,R4,R5,R9);
+
+	if([FILE_STATUS_TABLE + inodeIndex*4 + 1] !=-1) then
+		multipush(R1,R2,R3,R4,R5,R9);
+		R1=RELEASE_INODE;
+		R2=inodeIndex;
+		R3=[SYSTEM_STATUS_TABLE + 1];
+		call RESOURCE_MANAGER;
+		multipop(R1,R2,R3,R4,R5,R9);
+		[[R9 + ((userSP-1)/512)*2]*512 + (userSP-1)%512] = -2;
+		[pt_sst + 9] = 0;
+		SP = userSP;
+		ireturn;
+    	endif;
+
+    	R6=0;
+    	while(R6<4) do
+        	R7=[INODE_TABLE + inodeIndex*16 + 8 + R6];
+        	if(R7!= -1) then
+            		if([BUFFER_TABLE + (R7%4)*4]==R7) then
+                	[BUFFER_TABLE + (R7%4)*4 + 1] = 0;
+		    	endif;
+		    	multipush(R1,R2,R3,R4,R5,R6,R7,R9);
+		    	R1 = RELEASE_BLOCK;
+		    	R2 = R7;
+		    	R3 = [SYSTEM_STATUS_TABLE + 1];
+		    	call MEMORY_MANAGER;
+		    	multipop(R1,R2,R3,R4,R5,R6,R7,R9);
+        	endif;
+        	R6=R6+1;
+    	endwhile;
+    	[INODE_TABLE + inodeIndex*16 + 1] = -1;
+    	[ROOT_FILE + inodeIndex*8 + 0] = -1;
+    	multipush(R1,R2,R3,R4,R5,R9);
+   	R1=RELEASE_INODE;
+    	R2=inodeIndex;
+    	R3=[SYSTEM_STATUS_TABLE + 1];
+    	call RESOURCE_MANAGER;
+    	multipop(R1,R2,R3,R4,R5,R9);
+    	[[R9 + ((userSP-1)/512)*2]*512 + (userSP-1)%512] = 0;
+    	[pt_sst + 9] = 0;
+    	SP = userSP;
+    	ireturn;
+endif;
