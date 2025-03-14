@@ -1,0 +1,73 @@
+load --library $HOME/myexpos/expl/library.lib
+load --init $HOME/myexpos/expl/samples/shell_code1.xsm
+load --int=timer $HOME/myexpos/spl/spl_progs/sample_timer.xsm
+load --int=10 $HOME/myexpos/spl/spl_progs/int_10.xsm
+load --exhandler $HOME/myexpos/spl/spl_progs/haltprog.xsm
+load --int=7 $HOME/myexpos/spl/spl_progs/sample_int7.xsm
+load --os $HOME/myexpos/spl/spl_progs/os_startup.xsm
+load --idle $HOME/myexpos/expl/samples/idle_prog.xsm
+load --module 0 $HOME/myexpos/spl/spl_progs/resource_manager.xsm
+load --module 4 $HOME/myexpos/spl/spl_progs/device_manager.xsm
+load --module 5 $HOME/myexpos/spl/spl_progs/scheduler.xsm
+load --module 7 $HOME/myexpos/spl/spl_progs/boot_module.xsm
+load --int=6 $HOME/myexpos/spl/spl_progs/int_6.xsm
+load --int=console $HOME/myexpos/spl/spl_progs/console_int.xsm
+load --int=9 $HOME/myexpos/spl/spl_progs/int_9.xsm
+load --module 1 $HOME/myexpos/spl/spl_progs/process_manager.xsm
+load --module 2 $HOME/myexpos/spl/spl_progs/memory_manager.xsm
+load --module 3 $HOME/myexpos/spl/spl_progs/file_system.xsm
+rm odd.xsm
+load --exec $HOME/myexpos/expl/samples/odd.xsm
+load --int=disk $HOME/myexpos/spl/spl_progs/disk_int.xsm
+rm list.xsm
+load --exec $HOME/myexpos/expl/samples/list.xsm
+load --int=8 $HOME/myexpos/spl/spl_progs/int_8.xsm
+rm even.xsm
+load --exec $HOME/myexpos/expl/samples/even.xsm
+load --int=4 $HOME/myexpos/spl/spl_progs/int_4.xsm
+load --int=11 $HOME/myexpos/spl/spl_progs/int_11.xsm
+load --int=15 $HOME/myexpos/spl/spl_progs/int_15.xsm
+load --int=13 $HOME/myexpos/spl/spl_progs/int_13.xsm
+load --int=14 $HOME/myexpos/spl/spl_progs/int_14.xsm
+load --int=5 $HOME/myexpos/spl/spl_progs/int_5.xsm
+load --int=7 $HOME/myexpos/spl/spl_progs/int_7.xsm
+rm fork3.xsm
+load --exec $HOME/myexpos/expl/samples/fork3.xsm
+rm pid.xsm
+load --exec $HOME/myexpos/expl/samples/pid.xsm
+rm rw.xsm
+load --exec $HOME/myexpos/expl/samples/rw.xsm
+rm parent.xsm
+load --exec $HOME/myexpos/expl/samples/parent.xsm
+rm child.xsm
+load --exec $HOME/myexpos/expl/samples/child.xsm
+rm seq.xsm
+load --exec $HOME/myexpos/expl/samples/seq.xsm
+rm conc.xsm
+load --exec $HOME/myexpos/expl/samples/conc.xsm
+rm create.xsm
+load --exec $HOME/myexpos/expl/samples/create.xsm
+rm del.xsm
+load --exec $HOME/myexpos/expl/samples/del.xsm
+rm read.xsm
+load --exec $HOME/myexpos/expl/samples/read.xsm
+rm test5.xsm
+load --exec $HOME/myexpos/expl/samples/test5.xsm
+rm numbers.dat
+load --data $HOME/numbers.dat
+rm ls.xsm
+load --exec $HOME/myexpos/expl/samples/ls.xsm
+rm rm.xsm
+load --exec $HOME/myexpos/expl/samples/rm.xsm
+rm cp.xsm
+load --exec $HOME/myexpos/expl/samples/cp.xsm
+rm cat.xsm
+load --exec $HOME/myexpos/expl/samples/cat.xsm
+rm fwrite.xsm
+load --exec $HOME/myexpos/expl/samples/fwrite.xsm
+rm add.xsm
+load --exec $HOME/myexpos/expl/samples/add.xsm
+rm test6.xsm
+load --exec $HOME/myexpos/expl/samples/test6.xsm
+rm test15.xsm
+load --exec $HOME/myexpos/expl/samples/test15.xsm
