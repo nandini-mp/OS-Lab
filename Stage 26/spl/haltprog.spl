@@ -1,0 +1,60 @@
+breakpoint;
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16 + 9] = -1;
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16 + 13] = SP;
+
+if (SP == PTLR*512-1) then
+	print "fullSP";
+	R1 = 3;
+	R2 = [SYSTEM_STATUS_TABLE + 1];
+	call MOD_1;
+	halt;
+endif;
+
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16 + 11]*512 - 1;
+backup;
+
+multipush(EIP);
+
+if (EC!=0) then
+	multipop(EIP);
+	print "ERROR";
+	print EC;
+	print EIP;
+	print EPN;
+	R1 = 3;
+	R2 = [SYSTEM_STATUS_TABLE +1];
+	call MOD_1;
+	call MOD_5;
+endif;
+
+if (EPN>=4 && EPN<8) then
+	multipush(R0,R1,R2,R3);
+	R2 = [DISK_MAP_TABLE + [SYSTEM_STATUS_TABLE+1]*10 + EPN]; //code block to be loaded for handling exception
+	R1 = 5;
+	multipush(EPN);
+	call MOD_2; //get code page function
+	multipop(EPN);
+	[PAGE_TABLE_BASE + [SYSTEM_STATUS_TABLE+1]*20 + EPN*2 + 0] = R0;
+	[PAGE_TABLE_BASE + [SYSTEM_STATUS_TABLE+1]*20 + EPN*2 + 1] = "1100";
+	multipop(R0,R1,R2,R3);
+else
+	multipush(R0,R1,R2,R3);
+	R1 = 1;
+	call MOD_2; //if heap exception, get free page is called to allocate two pages to heap
+	[PAGE_TABLE_BASE + [SYSTEM_STATUS_TABLE+1]*20 + 4] = R0;
+	[PAGE_TABLE_BASE + [SYSTEM_STATUS_TABLE+1]*20 + 5] = "1110";
+	R1 = 1;
+	call MOD_2; //if heap exception, get free page is called to allocate two pages to heap
+	[PAGE_TABLE_BASE + [SYSTEM_STATUS_TABLE+1]*20 + 6] = R0;
+	[PAGE_TABLE_BASE + [SYSTEM_STATUS_TABLE+1]*20 + 7] = "1110";
+	multipop(R0,R1,R2,R3);
+endif;
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16 + 9] = 0;
+multipop(EIP);
+restore;
+
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16 + 13];
+SP = SP+1; //user SP logical address
+[[PAGE_TABLE_BASE + [SYSTEM_STATUS_TABLE+1]*20 + 2*(SP/512)]*512 + SP%512] = EIP; //store EIP to location pointed to by SP
+ireturn;
