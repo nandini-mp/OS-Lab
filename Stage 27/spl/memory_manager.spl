@@ -1,0 +1,121 @@
+alias functionNumber R1;
+
+if (functionNumber == 1) then
+	[SYSTEM_STATUS_TABLE + 3] = [SYSTEM_STATUS_TABLE + 3] + 1;
+	while ([SYSTEM_STATUS_TABLE + 2] == 0) do
+		[PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16 + 4] = WAIT_MEM;
+		multipush(R1,R2);
+		call MOD_5;
+		multipop(R1,R2);
+	endwhile;
+	[SYSTEM_STATUS_TABLE + 3] = [SYSTEM_STATUS_TABLE + 3] - 1;
+	[SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2] -1;
+	R2 = 128-[SYSTEM_STATUS_TABLE+2]; //max mem usage
+	if (R2>[SYSTEM_STATUS_TABLE+6]) then
+		[SYSTEM_STATUS_TABLE+6] = R2;
+	endif;
+	alias i R2;
+	i = 0;
+	while ([MEMORY_FREE_LIST + i] != 0) do
+		i = i+1;
+	endwhile;
+	[MEMORY_FREE_LIST + i] = 1;
+	R0 = i;
+	breakpoint;
+	return;
+endif;
+
+if (functionNumber == 2) then
+	alias releasePage R2;
+	[MEMORY_FREE_LIST + releasePage] = [MEMORY_FREE_LIST + releasePage] - 1;
+	if ([MEMORY_FREE_LIST + releasePage] == 0) then
+		[SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2] + 1;
+	endif;
+	alias i R3;
+	i = 0;
+	while (i<16) do
+		if (([PROCESS_TABLE + i*16 + 4] == WAIT_MEM) && ([PROCESS_TABLE + i*16 + 1]!=-1)) then
+			[PROCESS_TABLE + i*16 + 4] = READY;
+		endif;
+		i = i+1;
+	endwhile;
+	breakpoint;
+	return;
+endif;
+
+if (functionNumber == 3) then
+	alias i R2;
+	i = DISK_FREE_AREA;
+	while (i < DISK_SWAP_AREA) do
+		if ([DISK_FREE_LIST + i] == 0) then
+			[DISK_FREE_LIST + i] = 1;
+			R0 = i;
+			return;
+		endif;
+		i = i+1;
+	endwhile;
+	if (i == DISK_SWAP_AREA) then
+		R0 = -1;
+		return;
+	endif;
+endif;
+
+if (functionNumber == 4) then
+	[DISK_FREE_LIST + R2] = [DISK_FREE_LIST + R2] -1;
+	return;
+endif;
+
+if (functionNumber == 5) then
+	alias blockNum R2;
+	alias i R3;
+	i = 0;
+	while (i<160) do
+		if ([DISK_MAP_TABLE+i] == blockNum) then
+			R4 = R3/10; //PID
+			R5 = R3%10; //code block num
+			if ([PAGE_TABLE_BASE + R4*20 + R5*2]!=-1) then
+				R0 = [PAGE_TABLE_BASE + R4*20 + R5*2];
+				[MEMORY_FREE_LIST + R0] = [MEMORY_FREE_LIST + R0] +1;
+				breakpoint;
+				return;
+			endif;
+		endif;
+		i=i+1;
+	endwhile;
+	multipush(R0,R1,R2);
+	R1=1;
+	call MOD_2;
+	R3 = R0;
+	multipop(R0,R1,R2);
+	
+	multipush(R0,R1,R2,R3);
+	R4 = blockNum;
+	R1 = 2;
+	R2 = [SYSTEM_STATUS_TABLE+1];
+	R3=R3;
+	call MOD_4;
+	multipop(R0,R1,R2,R3);
+	R0 = R3;
+	breakpoint;
+	return;
+endif;
+
+if (functionNumber == 6) then 
+    alias i R2;
+    i = DISK_SWAP_AREA;
+    while (i < DISK_SIZE) do
+        if ([DISK_FREE_LIST + i] == 0) then 
+            break;
+        endif;
+        i = i+1;
+    endwhile;
+    if (i == DISK_SIZE) then
+        R0 = -1;
+    else
+        [DISK_FREE_LIST + i] = 1;
+        R0 = i;
+    endif;
+    return;
+endif;
+
+return;

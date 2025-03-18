@@ -1,0 +1,95 @@
+loadi(69,11);
+loadi(70,12);
+loadi(54,67);
+loadi(55,68);
+
+SP = 76*512 - 1;
+call BOOT_MODULE;
+
+PTBR = PAGE_TABLE_BASE;
+PTLR = 10;
+
+//Library
+[PTBR+0] = -1;
+[PTBR+1] = "0100";
+[PTBR+2] = -1;
+[PTBR+3] = "0100";
+
+//Heap
+[PTBR+4] = -1;
+[PTBR+5] = "0000";
+[PTBR+6] = -1;
+[PTBR+7] = "0000";
+
+//Code
+[PTBR+8] = 69;
+[PTBR+9] = "0100";
+[PTBR+10] = -1;
+[PTBR+11] = "0000";
+[PTBR+12] = -1;
+[PTBR+13] = "0000";
+[PTBR+14] = -1;
+[PTBR+15] = "0000";
+
+//Stack
+[PTBR+16] = 70;
+[PTBR+17] = "0110";
+[PTBR+18] = -1;
+[PTBR+19] = "0000";
+
+[PROCESS_TABLE + 1] = 0;
+[PROCESS_TABLE + 3] = 0;
+[PROCESS_TABLE + 4] = RUNNING;
+[PROCESS_TABLE + 11] = 76;
+[PROCESS_TABLE + 12] = 0;
+[PROCESS_TABLE + 13] = 8*512;
+[PROCESS_TABLE + 14] = PAGE_TABLE_BASE;
+[PROCESS_TABLE + 15] = 10;
+
+[70*512] = [69*512+1];
+
+//SWAPPER DAEMON with PID 15
+//Page TABLE
+R1 = PAGE_TABLE_BASE + 15*20;
+// Library
+[R1+0] = -1;
+[R1+1] = "0000";
+[R1+2] = -1;
+[R1+3] = "0000";
+// Heap
+[R1+4] = -1;
+[R1+5] = "0000";
+[R1+6] = -1;
+[R1+7] = "0000";
+// Code
+[R1+8] = 69;
+[R1+9] = "0100";
+[R1+10] = -1;
+[R1+11] = "0000";
+[R1+12] = -1;
+[R1+13] = "0000";
+[R1+14] = -1;
+[R1+15] = "0000";
+// Stack
+[R1+16] = 81;
+[R1+17] = "0110";
+[R1+18] = -1;
+[R1+19] = "0000";
+
+R1=PROCESS_TABLE+15*16;
+[R1 + 0] = 0;
+[R1 + 1] = 15;
+[R1 + 3] = 0;
+[R1 + 4] = CREATED;
+[R1 + 11] = 82;
+[R1 + 12] = 0;
+[R1 + 13] = 8*512;
+[R1 + 14] = PAGE_TABLE_BASE + 15*20;
+[R1 + 15] = 10;
+
+[81*512] = [69*512 + 1];
+
+[SYSTEM_STATUS_TABLE + 1] = 0;
+SP = 8*512;
+
+ireturn;
